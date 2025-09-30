@@ -1,0 +1,3 @@
+# Dependencies for the hello world application
+# For now, we'll keep it simple with no external dependencies
+# This file is important for CI/CD - it tells the system what packages to install
