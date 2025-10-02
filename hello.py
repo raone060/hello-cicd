@@ -3,13 +3,48 @@
 Flask Hello World application for learning CI/CD
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import os
+import socket
 
 
 def say_hello(name="World"):
     """Return a greeting message"""
     return f"Hello, {name}!"
+
+
+def get_host_info():
+    """Get host IP and hostname information"""
+    try:
+        # Get hostname
+        hostname = socket.gethostname()
+        
+        # Get local IP address
+        local_ip = socket.gethostbyname(hostname)
+        
+        # Get external IP (if available)
+        external_ip = None
+        try:
+            # This might not work in all environments
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            external_ip = s.getsockname()[0]
+            s.close()
+        except:
+            pass
+            
+        return {
+            "hostname": hostname,
+            "local_ip": local_ip,
+            "external_ip": external_ip
+        }
+    except Exception as e:
+        return {
+            "hostname": "unknown",
+            "local_ip": "unknown",
+            "external_ip": "unknown",
+            "error": str(e)
+        }
 
 
 # Create Flask application
@@ -56,11 +91,19 @@ def health():
 
 @app.route('/api/info')
 def api_info():
-    """API information"""
+    """API information with host details"""
+    host_info = get_host_info()
+
     return jsonify({
         "name": "Hello CI/CD API",
         "version": "1.0.0",
         "description": "A simple Flask API for learning CI/CD",
+        "host_info": host_info,
+        "request_info": {
+            "remote_addr": request.remote_addr,
+            "user_agent": request.headers.get('User-Agent', 'Unknown'),
+            "host": request.headers.get('Host', 'Unknown')
+        },
         "endpoints": [
             "/",
             "/hello",

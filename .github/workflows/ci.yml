@@ -100,3 +100,21 @@ jobs:
         docker push ghcr.io/${{ github.repository }}:latest
         docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
         docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+    - name: Update GitOps Repository
+      run: |
+        # Clone GitOps repo
+        git clone https://github.com/raone060/hello-cicd-manifests.git
+        cd hello-cicd-manifests
+        
+        # Update image tag in kustomization.yaml
+        sed -i "s|newTag: .*|newTag: ${{ github.sha }}|g" environments/dev/kustomization.yaml
+        
+        # Configure git
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        
+        # Commit and push changes
+        git add environments/dev/kustomization.yaml
+        git commit -m "Update hello-cicd image to ${{ github.sha }}"
+        git push https://${{ secrets.GHCR_TOKEN }}@github.com/raone060/hello-cicd-manifests.git
