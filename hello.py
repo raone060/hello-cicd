@@ -18,10 +18,10 @@ def get_host_info():
     try:
         # Get hostname
         hostname = socket.gethostname()
-        
+
         # Get local IP address
         local_ip = socket.gethostbyname(hostname)
-        
+
         # Get external IP (if available)
         external_ip = None
         try:
@@ -30,9 +30,10 @@ def get_host_info():
             s.connect(("8.8.8.8", 80))
             external_ip = s.getsockname()[0]
             s.close()
-        except:
+        except Exception as e:
+            print(f"Error getting external IP: {e}")
             pass
-            
+
         return {
             "hostname": hostname,
             "local_ip": local_ip,
