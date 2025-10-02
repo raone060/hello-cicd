@@ -3,7 +3,7 @@
 Flask Hello World application for learning CI/CD
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 import os
 
 
@@ -74,7 +74,7 @@ def api_info():
 if __name__ == "__main__":
     # Get port from environment variable or default to 8000
     port = int(os.environ.get('PORT', 8000))
-    
+
     # Run the Flask app
     app.run(
         host='0.0.0.0',  # Allow external connections
