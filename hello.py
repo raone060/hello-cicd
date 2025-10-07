@@ -67,8 +67,7 @@ def hello():
     """Hello endpoint"""
     return jsonify({
         "message": say_hello(),
-        "status": "success",
-        "name": "Charulochana"
+        "status": "success"
     })
 
 
