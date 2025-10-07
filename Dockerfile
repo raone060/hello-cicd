@@ -19,7 +19,7 @@ RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
 USER app
 
 # Expose port for Flask web service
-EXPOSE 8080
+EXPOSE 8000
 
 # Set environment variables
 ENV PYTHONPATH=/app
@@ -29,7 +29,7 @@ ENV FLASK_ENV=development
 
 # Health check for Flask app
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the Flask application with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "hello:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "hello:app"]
