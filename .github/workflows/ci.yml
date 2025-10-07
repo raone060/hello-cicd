@@ -3,13 +3,13 @@ name: CI/CD Pipeline
 # When to run this workflow
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ dev ]
   pull_request:
     branches: [ master ]
 
 # Jobs define what the workflow does
 jobs:
-  # Job 1: Test the code (existing)
+  # Job 1: Test the code
   test:
     runs-on: ubuntu-latest
     
@@ -31,11 +31,12 @@ jobs:
       run: |
         python test_hello.py
         
-    - name: Test application
+    - name: Test Flask application
       run: |
-        python hello.py
+        # Test Flask app starts
+        python -c "from hello import app; print('Flask app imported successfully')"
 
-  # Job 2: Code quality checks (existing)
+  # Job 2: Code quality checks
   lint:
     runs-on: ubuntu-latest
     
@@ -56,9 +57,9 @@ jobs:
       run: |
         flake8 hello.py test_hello.py --max-line-length=100
 
-  # Job 3: NEW - Docker Build and Deploy
+  # Job 3: Docker Build and Deploy
   docker-deploy:
-    needs: [test, lint]  # Only run if tests and lint pass
+    needs: [test, lint]
     runs-on: ubuntu-latest
     
     steps:
@@ -68,13 +69,20 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
-    - name: Build Docker image
+    - name: Build Docker image with tags
       run: |
-        docker build -t hello-cicd:latest .
+        docker build -t hello-cicd-flask:latest .
+        docker build -t hello-cicd-flask:${{ github.sha }} .
+        docker build -t hello-cicd-flask:${{ github.ref_name }} .
         
     - name: Test Docker container
       run: |
-        docker run --rm hello-cicd:latest
+        docker run -d --name test-container -p 8080:8000 hello-cicd-flask:latest
+        sleep 10
+        curl -f http://localhost:8080/health || exit 1
+        curl -f http://localhost:8080/ || exit 1
+        docker stop test-container
+        docker rm test-container
         
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
@@ -85,5 +93,28 @@ jobs:
         
     - name: Push to GitHub Container Registry
       run: |
-        docker tag hello-cicd:latest ghcr.io/${{ github.repository }}:latest
+        docker tag hello-cicd-flask:latest ghcr.io/${{ github.repository }}:latest
+        docker tag hello-cicd-flask:${{ github.sha }} ghcr.io/${{ github.repository }}:${{ github.sha }}
+        docker tag hello-cicd-flask:${{ github.ref_name }} ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+        
         docker push ghcr.io/${{ github.repository }}:latest
+        docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+        docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+    - name: Update GitOps Repository
+      run: |
+        # Clone GitOps repo
+        git clone https://github.com/raone060/hello-cicd-manifests.git
+        cd hello-cicd-manifests
+        
+        # Update image tag in kustomization.yaml
+        sed -i "s|newTag: .*|newTag: ${{ github.sha }}|g" environments/dev/kustomization.yaml
+        
+        # Configure git
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        
+        # Commit and push changes
+        git add environments/dev/kustomization.yaml
+        git commit -m "Update hello-cicd image to ${{ github.sha }}"
+        git push https://${{ secrets.GHCR_TOKEN }}@github.com/raone060/hello-cicd-manifests.git
